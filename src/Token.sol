@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC20Burnable, Erc20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract MyToken is ERC20Burnable, Ownable {
     error MyToken__AmountMustBeGreaterThanZero();
@@ -27,13 +28,19 @@ contract MyToken is ERC20Burnable, Ownable {
         _;
     }
 
-    function burn(uint256 amount) public override onlyOwner notZeroAmount(amount) {
+    function burn(uint256 amount) 
+        public 
+        override 
+        onlyOwner 
+        nonReentrant 
+        notZeroAmount(amount) 
+        {
         super.burn(amount);
     }
 
+
     function transferTokens(address to, uint256 amount)
         public
-        override
         validAddress(to)
         notZeroAmount(amount)
         returns (bool)
@@ -42,20 +49,19 @@ contract MyToken is ERC20Burnable, Ownable {
         if (balance < _amount) {
             revert MyToken__BalanceMustBeMoreThanAmount();
         }
-        transfer(_to, _amount);
+      
+        _transfer(msg.sender to, amount);
         return true;
     }
 
-    function transferTokenFrom(address from, address to, uint256 amount) public view override returns (bool) {
-        uint256 balance = balanceOf(from);
-        uint256 balanceTo = balanceOf(to);
-        if (balances < amount) {
-            revert MyToken__BalanceMustBeMoreThanAmount();
-        } else {
-            balance -= amount;
-            balanceTo += amount;
-        }
-        transferFrom(from, to, amount);
+
+    function transferTokenFrom(address from, address to, uint256 amount) 
+        public 
+        validAddress(to) 
+        notZeroAmount(amount) 
+        returns (bool) 
+    {
+        _transferFrom(from, to, amount);
         return true;
     }
 
@@ -64,6 +70,6 @@ contract MyToken is ERC20Burnable, Ownable {
     }
 
     function getAccountBalance(address account) public view returns (uint256) {
-        balanceOf(account);
+       return balanceOf(account);
     }
 }
